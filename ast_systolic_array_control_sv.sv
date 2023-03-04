@@ -4,7 +4,7 @@ module ast_systolic_array_control_sv (
  clk,
  reset,
  cycles_in,
- width_A,
+ depth_A,
  width_B,
  start,
  load_en,
@@ -21,7 +21,7 @@ module ast_systolic_array_control_sv (
 	 
 	 input logic clk, reset, start;
 	 input logic [$clog2(SIZE)+1:0] cycles_in;
-	 input logic [$clog2(SIZE):0] width_A, width_B; //row dimensions for mem select
+	 input logic [$clog2(SIZE):0] depth_A, width_B; //row dimensions for mem select
 	 output logic load_en, mult_en, acc_en;
 	 output logic [SIZE-1:0] memsel_A, memsel_B;
 	 output logic done, next, busy;
@@ -100,7 +100,7 @@ module ast_systolic_array_control_sv (
 									acc_en <= 0;
 									next <= 1;
 									cycles <= cycles + 1;
-									if(cycles < width_A)
+									if(cycles < depth_A)
 										 memsel_A <= {memsel_A[SIZE-2:0], 1'b1}; 
 									else
 										 memsel_A <= {memsel_A[SIZE-2:0], 1'b0};

@@ -142,6 +142,7 @@ module ast_tensor_system_sv (
 			ast_ldfifo #(.DEPTH(SIZE), .DATAWIDTH(DATAWIDTH)) fifo_A (
 				.clk(clk),
 				.rst(reset),
+				.rst_ptr(done),
 				.pop(fifo_select_A[i] & next_element),
 				.push(decode_out[i] & wen & ~set),
 				.parallel_load(1'b0),
@@ -167,6 +168,7 @@ module ast_tensor_system_sv (
 			ast_ldfifo #(.DEPTH(SIZE), .DATAWIDTH(DATAWIDTH)) fifo_B (
 				.clk(clk),
 				.rst(reset),
+				.rst_ptr(done),
 				.pop(fifo_select_B[j] & next_element),
 				.push(decode_out_B[j] & wen & set),
 				.parallel_load(1'b0),
@@ -202,7 +204,7 @@ module ast_tensor_system_sv (
 		 .acc_en(acc_en),
 		 .load_en(load_en),
 		 .clk(clk),
-		 .reset(reset),
+		 .reset(reset | done),
 		 .d_out(d_fromarray)
 	);
 	
@@ -212,7 +214,7 @@ module ast_tensor_system_sv (
         .clk(clk),
         .reset(reset),
         .cycles_in(mac_cycles), 
-		  .width_A(width_A),
+		  .depth_A(depth_A),
 		  .width_B(width_B),
 		  .load_en(load_en),
         .mult_en(mult_en),
@@ -256,6 +258,7 @@ module ast_tensor_system_sv (
 			ast_ldfifo #(.DEPTH(SIZE), .DATAWIDTH(DATAWIDTH)) fifo_X (
 				.clk(clk),
 				.rst(reset),
+				.rst_ptr(1'b0),
 				.pop((((result_depth_counter == depth_B-1) & result_decode_out[k-1]) || result_decode_out[k]) & ren),
 				.parallel_load(finished_multiplicaiton),
 				.array_in(d_activation[k]),
@@ -265,6 +268,7 @@ module ast_tensor_system_sv (
 			ast_ldfifo #(.DEPTH(SIZE), .DATAWIDTH(DATAWIDTH)) fifo_X (
 				.clk(clk),
 				.rst(reset),
+				.rst_ptr(1'b0),
 				.pop(result_decode_out[k] & ren),
 				.parallel_load(finished_multiplicaiton),
 				.array_in(d_activation[k]),

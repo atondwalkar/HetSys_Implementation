@@ -172,7 +172,12 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 				else	
 				begin
 				
-				if((PM_done && DM_done) && ~Pause_in)
+	if(Pause_in)
+	begin
+		DMA_write_out = 0;
+		Start_MXU_out = 0;
+	end
+	else if((PM_done && DM_done) && ~Pause_in)
 	begin
 				
 				
@@ -257,12 +262,13 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 				nop_status = 1;
 			end
 			CFGDMA_IC: begin
-				DMA_write_out = 1;
-				DMA_select_out = Rj2;
-				DMA_data_out = T_DMA_data_out;
+				//DMA_write_out = 1;
+				//DMA_select_out = Rj2;
+				//DMA_data_out = T_DMA_data_out;
+				DMA_write_out = 0;
 			end
 			SMXU_IC: begin
-				Start_MXU_out = 0;
+				Start_MXU_out = 1;
 			end
 			LD_IC, JMP_IC: begin 
 //Address Arithmetic to calculate the effective address:
@@ -444,17 +450,19 @@ TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // 
 				nop_status = 1;
 			end
 			CFGDMA_IC: begin
-				if (Ri1 == 0) T_DMA_data_out = PM_out; 
+				if (Ri1 == 0) DMA_data_out = PM_out; 
 				else	
 				begin
-					if (Ri1 == Ri2) T_DMA_data_out = PM_out + TALUH; 
-					else if ((IR2[13:8] != ADDC_IC && IR2[13:8] != SUB_IC) && (IR2[13:8] == MUL_IC || IR2[13:8] == DIV_IC || IR2[13:8] == SWAP_IC) && Ri1 == Rj2) T_DMA_data_out = PM_out + TALUL;
-					else T_DMA_data_out = PM_out + R[Ri1];
+					if (Ri1 == Ri2) DMA_data_out = PM_out + TALUH; 
+					else if ((IR2[13:8] != ADDC_IC && IR2[13:8] != SUB_IC) && (IR2[13:8] == MUL_IC || IR2[13:8] == DIV_IC || IR2[13:8] == SWAP_IC) && Ri1 == Rj2) DMA_data_out = PM_out + TALUL;
+					else DMA_data_out = PM_out + R[Ri1];
 				end
+				DMA_write_out = 1;
+				DMA_select_out = Rj1;
 				PC = PC + 1'b1;
 			end
 			SMXU_IC: begin
-				Start_MXU_out = 1;
+				Start_MXU_out = 0;
 			end
 			
 			LD_IC, ST_IC, JMP_IC: begin

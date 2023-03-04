@@ -17,8 +17,8 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
   
   
   logic [5:0][DATAWIDTH-1:0] mem;
-  /*	0 - Depth
-  *	1 - Width
+  /*	0 - Col Dimension of Matrix
+  *	1 - Row Dimension of Matrix
   *	2 - A(0), B(1), X(2, pop)
   *	3 - start transfer
   *	4 - Current/Source Addr
@@ -44,37 +44,15 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
 		end
 		else
 		begin
-			if(write)
-			begin
-				mem[select] <=  write ? data_in : mem[select];
-				finished_transfer <= 0;
-				busy <= 0;
-				tensor_ren <= 0;
-				tensor_wen <= 0;
-				fifo_delay <= 0;
-				if(select == 3)
-					mem[5] <= mem[4] + mem[1]*mem[0];
-			end
-			/*else if((mem[4] == mem[5] - 1) && mem[3][0] && mem[2] == 2)
+			if((mem[4] == mem[5]) && mem[3][0])
 			begin
 				finished_transfer <= 1;
 				fifo_delay <= 0;
-				busy <= 0;
+				//busy <= 0;
 				mem[3] <= 0;
 				rW_out <= 0;
-				tensor_ren <= 0;
-				tensor_wen <= 0;
-				mem[5] <= 0;
-			end*/		
-			else if((mem[4] == mem[5]) && mem[3][0])
-			begin
-				finished_transfer <= 1;
-				fifo_delay <= 0;
-				busy <= 0;
-				mem[3] <= 0;
-				rW_out <= 0;
-				tensor_ren <= 0;
-				tensor_wen <= 0;
+				//tensor_ren <= 0;
+				//tensor_wen <= 0;
 				mem[5] <= 0;
 			end
 			else if((fifo_delay != 2'b10) && mem[3][0])
@@ -87,19 +65,6 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
 				else rW_out <= 0;
 				//mem[4] = mem[4] - 1;
 			end
-			/*else if(mem[3][0] && (mem[2] == 2) && (mem[4] == mem[5]-1))
-			begin
-				finished_transfer <= 0;
-				mem[4] = mem[4] + 1;
-				rW_out <= 1;
-				tensor_ren <= 0;
-				busy <= 1;
-			end*/
-			/*else if(mem[3][0] && mem[2] == 2 && mem[4] == mem[5] - 1)
-			begin
-				rW_out <= 0;
-				mem[4] = mem[4] + 1;
-			end	*/
 			else if(mem[3][0])
 			begin
 				finished_transfer <= 0;
@@ -109,6 +74,17 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
 				tensor_ren <= (mem[2] == 2) ? 1 : 0;
 				tensor_wen <= (mem[2] == 2) ? 0 : 1;
 			end
+			else if(write)
+			begin
+				mem[select] <=  write ? data_in : mem[select];
+				finished_transfer <= 0;
+				busy <= 0;
+				tensor_ren <= 0;
+				tensor_wen <= 0;
+				fifo_delay <= 0;
+				if(select == 3)
+					mem[5] <= mem[4] + mem[1]*mem[0] - 1;
+			end
 			else
 			begin
 				finished_transfer <= 0;
@@ -116,6 +92,7 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
 				tensor_wen <= 0;
 				tensor_ren <= 0;
 				fifo_delay <= 0;
+				rW_out <= 0;
 			end
 		end
 	end

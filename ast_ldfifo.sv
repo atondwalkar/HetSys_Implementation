@@ -1,6 +1,7 @@
 module ast_ldfifo #(parameter DEPTH = 8, parameter DATAWIDTH = 8) (
   input clk,
   input rst,
+  input rst_ptr,
   input push,
   input pop,
   input parallel_load,
@@ -17,14 +18,25 @@ module ast_ldfifo #(parameter DEPTH = 8, parameter DATAWIDTH = 8) (
   integer i;
   
   always @(posedge clk) begin
-    if (rst) begin
+    if (rst) 
+	 begin
       write_ptr <= 0;
       read_ptr <= 0;
       empty <= 1;
       full <= 0;
 		data_out <= 0;
 		for(i=0; i<DEPTH; i++) mem[i] <= 0;
-    end else begin
+    end
+    else if(rst_ptr)
+	 begin
+		write_ptr <= 0;
+		read_ptr <= 0;
+		empty <= 1;
+      full <= 0;
+		data_out <= 0;
+	 end
+	 else 
+	 begin
       if(parallel_load)
 		begin
 			for(i=0; i<DEPTH; i++)

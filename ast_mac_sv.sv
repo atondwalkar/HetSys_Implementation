@@ -24,7 +24,7 @@ module ast_mac_sv(
     
     reg [(DATAWIDTH*2)-1:0] mult;
     
-    always @ (posedge clk or posedge reset)
+    always @ (posedge clk)
     begin
         if(reset)
         begin

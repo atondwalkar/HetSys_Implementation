@@ -1,0 +1,71 @@
+--Program Memory Initialization File 	
+--Created by ast_dcs_asm 	
+WIDTH = 14; 	
+DEPTH = 16384; 	
+ADDRESS_RADIX = HEX;	% Can be HEX, BIN or DEC % 	
+DATA_RADIX = DEC;	% Can be HEX, BIN or DEC % 	
+
+CONTENT BEGIN
+
+0000 : 1; 
+0001 : 2;
+0002 : 3;
+0003 : 4;
+0004 : 5;
+0005 : 6;
+0006 : 7;
+0007 : 8;
+0008 : 9;
+0009 : 10;
+000a : 11;
+000b : 12;
+
+[ 000C .. 001F ] : 00000000000000; % Fill the remaining locations with 0 % 
+
+0020 : 1; 
+0021 : -2;
+0022 : 3;
+
+[ 0023 .. 003F ] : 00000000000000; % Fill the remaining locations with 0 % 
+
+0040 : 5; 
+0041 : 2;
+0042 : 6;
+0043 : 1;
+0044 : 0;
+0045 : 6;
+0046 : 2;
+0047 : 0;
+0048 : 3;
+0049 : 8;
+004a : 1;
+004b : 4;
+004c : 1;
+004d : 8;
+004e : 5;
+004f : 6;
+
+0050 : 7; 
+0051 : 5;
+0052 : 8;
+0053 : 0;
+0054 : 1;
+0055 : 8;
+0056 : 2;
+0057 : 6;
+0058 : 9;
+0059 : 4;
+005a : 3;
+005b : 8;
+005c : 5;
+005d : 3;
+005e : 7;
+005f : 9;
+
+[ 0060 .. 03FF ] : 00000000000000; % Fill the remaining locations with 0 % 
+
+[ 3F20 .. 3F2F ] : -10;
+
+[ 3F30 .. 3F3F ] : -10;
+
+ END; 

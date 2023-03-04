@@ -70,7 +70,7 @@ reg	[cam_depth_max-1:0] cam0_init, cam1_init; // to mark the first upload
 									// of a block of data to each cache block location
 reg	[cam_depth_max-1:0] cam0_dirty_bit, cam1_dirty_bit; // to record if
 reg 	[ma_max-1:0] MEM_snooped;
-reg	[1:0] snoop_delay;
+reg	snoop_status;
 									// the block was ever written while in the cache 
 //----------------------------------------------------------------------------
 // grp_addrs_field is used to capture the value of the group address field
@@ -90,7 +90,7 @@ integer	grp_addrs_field;
 	//ast_CAM_v	my_cam0	(we0, 1'b1, din0, MEM_address_mux[ma_max-5:6], MEM_address_mux[5:4], dout0, mbits0);
 	//ast_CAM_v	my_cam1	(we1, 1'b1, din1, MEM_address_mux[ma_max-5:6], MEM_address_mux[5:4], dout1, mbits1);
 	
-	assign valid_snoop = (snoop_wen && (&snoop_addr[13:8]));
+	assign valid_snoop = (snoop_wen && (&snoop_addr[13:8])); 
 	
 	assign MEM_address_mux = valid_snoop ? snoop_addr : MEM_address;
 	
@@ -130,6 +130,7 @@ integer	grp_addrs_field;
 // Behavioral part of the code = memory subsystem "control unit"
 //----------------------------------------------------------------------------
 
+
 always @ (posedge c0) begin
 	if (Resetn == 0) begin
 //----------------------------------------------------------------------------
@@ -143,6 +144,7 @@ always @ (posedge c0) begin
 		cam1_init[cam_depth_max-1:0] = {cam_depth_max{1'b0}};
 		cam0_dirty_bit[cam_depth_max-1:0] = {cam_depth_max{1'b0}};
 		cam1_dirty_bit[cam_depth_max-1:0] = {cam_depth_max{1'b0}};
+		snoop_status = 0;
 		end
 	else begin 	
 	grp_addrs_field = MEM_address_mux[5:4];
@@ -150,9 +152,17 @@ always @ (posedge c0) begin
 	
 		if(valid_snoop)
 		begin
-			if(|(mbits0 & grp & cam0_init) || |(mbits1 & grp & cam1_init))
+			if(|(mbits0 & grp & cam0_init))
 			begin
 				miss = 1;
+				snoop_status = 1;
+				replace[grp_addrs_field] = 1'b0;
+			end
+			else if (|(mbits1 & grp & cam1_init))
+			begin
+				miss = 1;
+				snoop_status = 1;
+				replace[grp_addrs_field] = 1'b1;
 			end
 			else
 				miss = 0;
@@ -284,6 +294,12 @@ always @ (posedge c0) begin
 //----------------------------------------------------------------------------
 // At the end of a block transfer, update the CAMs
 //----------------------------------------------------------------------------
+		if(snoop_status == 1 && valid_snoop == 0)
+		begin
+			snoop_status = 0;
+			transfer_count = 5'b10001;
+		end
+
 		if (transfer_count == 5'b10001) begin
 			miss = 0; wren = 0; transfer_count = 5'b00000;
 			if (replace[grp_addrs_field] == 0) begin
