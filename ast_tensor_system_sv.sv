@@ -288,7 +288,7 @@ module ast_tensor_system_sv (
 	
 	always_ff @ (posedge clk) //pushing into FIFO
 	begin
-		if(reset)
+		if(reset || done)
 			result_depth_counter <= {($clog2(SIZE)+1){1'b1}};
 		else if(result_depth_counter == depth_B-1)
 			result_depth_counter <= 0;
@@ -298,7 +298,7 @@ module ast_tensor_system_sv (
 	
 	always_ff @ (posedge clk) //going to next FIFO
 	begin
-		if(reset || ((result_width_counter == width_A-1) & (result_depth_counter == depth_B-1)))
+		if(reset || done || ((result_width_counter == width_A-1) & (result_depth_counter == depth_B-1)))
 			result_width_counter <= 0;
 		else
 			result_width_counter <= (ren & result_depth_counter == depth_B-1) ? (result_width_counter + 1) : result_width_counter;
