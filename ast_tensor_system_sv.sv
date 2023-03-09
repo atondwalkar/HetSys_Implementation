@@ -8,7 +8,7 @@ module ast_tensor_system_sv (
 	width,	//row width of FIFOs
 	data_in,
 	wen,		//write enable to push fifo
-	set,	 	//set == 0 is fifo set A, otherwise B
+	set,	 	//set == 0 is fifo set A, set == 1 B, set == 3 W
 	relu,		//enable ReLU
 	busy,
 	data_out,
@@ -20,7 +20,8 @@ module ast_tensor_system_sv (
 	parameter DATAWIDTH = 14;
 	parameter SIZE = 4;
 	
-	input logic clk, reset, wen, set, ren, start, relu;
+	input logic clk, reset, wen, ren, start, relu;
+	input logic [1:0] set;
 	input logic [$clog2(SIZE):0] depth, width;
 	input logic [DATAWIDTH-1:0] data_in;
 	output logic [DATAWIDTH-1:0] data_out;
@@ -36,14 +37,16 @@ module ast_tensor_system_sv (
 	// depth - column size
 	// width - row size
 	
-	logic [SIZE-1:0][DATAWIDTH-1:0] a_toarray, a_mux; 	
-	logic [SIZE-1:0][DATAWIDTH-1:0] b_toarray, b_mux;
-	logic [SIZE-1:0][SIZE-1:0][DATAWIDTH-1:0] d_fromarray, d_activation;
+	logic [DATAWIDTH-1:0] a_toarray [SIZE-1:0], a_mux [SIZE-1:0]; 	
+	logic [DATAWIDTH-1:0] b_toarray [SIZE-1:0], b_mux [SIZE-1:0];
+	logic [DATAWIDTH-1:0] d_fromarray [SIZE-1:0][SIZE-1:0], d_weighted [SIZE-1:0][SIZE-1:0], d_activation [SIZE-1:0][SIZE-1:0];
 	
 	logic finished_multiplicaiton, next_element; //from CU
 	logic [SIZE-1:0] fifo_select_A, fifo_select_B; //FIFO pop from CU
 	
 	logic [$clog2(SIZE)+1:0] mac_cycles;
+	
+	logic [DATAWIDTH-1:0] weights [SIZE-1:0][SIZE-1:0];
 	
 	
 				
@@ -55,7 +58,7 @@ module ast_tensor_system_sv (
 		if(reset)
 			depth_A <= 0;
 		else
-			depth_A <= (~set & wen) ? depth : depth_A;
+			depth_A <= (~set[1] & ~set[0] & wen) ? depth : depth_A;
 	end
 	
 	always_ff @ (posedge clk)
@@ -63,7 +66,7 @@ module ast_tensor_system_sv (
 		if(reset)
 			width_A <= 0;
 		else
-			width_A <= (~set & wen) ? width : width_A;
+			width_A <= (~set[1] & ~set[0] & wen) ? width : width_A;
 	end
 	
 	always_ff @ (posedge clk)
@@ -71,7 +74,7 @@ module ast_tensor_system_sv (
 		if(reset)
 			depth_B <= 0;
 		else
-			depth_B <= (set & wen) ? depth : depth_B;
+			depth_B <= (~set[1] & set[0] & wen) ? depth : depth_B;
 	end
 	
 		
@@ -80,7 +83,7 @@ module ast_tensor_system_sv (
 		if(reset)
 			width_B <= 0;
 		else
-			width_B <= (set & wen) ? width : width_B;
+			width_B <= (~set[1] & ~set[0] & wen) ? width : width_B;
 	end
 	
 	
@@ -121,6 +124,45 @@ module ast_tensor_system_sv (
 	
 	//-------------------------------------------------------------------------------
 
+	
+	//-------------------------------------------------------------------------------
+	// Weight storage and usage
+	
+	integer row, col;
+	
+	always_ff @ (posedge clk)
+	begin
+		if(reset)
+		begin
+			for(row = 0; row < SIZE; row=row+1)
+			begin
+				for(col = 0; col < SIZE; col=col+1)
+				begin
+					weights[row][col] = 0;
+				end
+			end
+		end
+		else
+		begin
+			weights[width_counter][depth_counter] = (set[1] & set[0] & wen) ? data_in : 0;
+		end
+	end
+	
+	integer weight_r, weight_c;
+	
+	always_comb
+	begin
+		for(weight_r=0; weight_r<SIZE; weight_r++)
+		begin
+			for(weight_c=0; weight_c<SIZE; weight_c++)
+			begin
+				d_weighted[weight_r][weight_c] = d_fromarray[weight_r][weight_c] + weights[weight_r][weight_c];
+			end
+		end
+	end
+
+	//-------------------------------------------------------------------------------
+	
 
 		
 			
@@ -131,20 +173,12 @@ module ast_tensor_system_sv (
    generate //generate FIFO set A
 		for (i=0; i<SIZE; i++) 
 		begin : block_A
-			/*ast_fifo #(.DEPTH(SIZE), .DATAWIDTH(DATAWIDTH)) fifo_A (
-				.clk(clk),
-				.rst(reset),
-				.pop(fifo_select_A[i] & next_element),
-				.push(decode_out[i] & wen & ~set),
-				.data_in(data_in),
-				.data_out(a_toarray[i])
-			);*/
 			ast_ldfifo #(.DEPTH(SIZE), .DATAWIDTH(DATAWIDTH)) fifo_A (
 				.clk(clk),
 				.rst(reset),
 				.rst_ptr(done),
 				.pop(fifo_select_A[i] & next_element),
-				.push(decode_out[i] & wen & ~set),
+				.push(decode_out[i] & wen & ~set[1] & ~set[0]),
 				.parallel_load(1'b0),
 				.data_in(data_in),
 				.data_out(a_toarray[i])
@@ -157,20 +191,12 @@ module ast_tensor_system_sv (
    generate //generate FIFO set B
 		for (j=0; j<SIZE; j++) 
 		begin : block_B
-			/*ast_fifo #(.DEPTH(SIZE), .DATAWIDTH(DATAWIDTH)) fifo_B (
-				.clk(clk),
-				.rst(reset),
-				.pop(fifo_select_B[j] & next_element),
-				.push(decode_out_B[j] & wen & set),
-				.data_in(data_in),
-				.data_out(b_toarray[j])
-			);*/
 			ast_ldfifo #(.DEPTH(SIZE), .DATAWIDTH(DATAWIDTH)) fifo_B (
 				.clk(clk),
 				.rst(reset),
 				.rst_ptr(done),
 				.pop(fifo_select_B[j] & next_element),
-				.push(decode_out_B[j] & wen & set),
+				.push(decode_out_B[j] & wen & ~set[1] & set[0]),
 				.parallel_load(1'b0),
 				.data_in(data_in),
 				.data_out(b_toarray[j])
@@ -245,7 +271,7 @@ module ast_tensor_system_sv (
 		begin
 			for(act_c=0; act_c<SIZE; act_c++)
 			begin
-				d_activation[act_r][act_c] = (relu == 1) ? ((d_fromarray[act_r][act_c] > 0) ? d_fromarray[act_r][act_c] : 0) : d_fromarray[act_r][act_c];
+				d_activation[act_r][act_c] = (relu == 1) ? ((d_weighted[act_r][act_c] > 0) ? d_weighted[act_r][act_c] : 0) : d_weighted[act_r][act_c];
 			end
 		end
 	end

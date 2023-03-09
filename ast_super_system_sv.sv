@@ -8,7 +8,7 @@ module ast_super_system_sv(
 	output [95:0] ICis
 	);
 
-   parameter SIZE = 6;
+   parameter SIZE = 4;
 	parameter DATAWIDTH = 14;
 
 	logic write_dma, rW_dma_out;
@@ -64,7 +64,7 @@ module ast_super_system_sv(
 		.data_in(ram_out),
 		.wen(tensor_wen),
 		.ren(tensor_ren),
-		.set(dma_set[0]),
+		.set(dma_set),
 		.relu(relu),
 		.start(start_mxu),
 		.busy(mxu_busy),

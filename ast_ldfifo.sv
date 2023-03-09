@@ -5,7 +5,7 @@ module ast_ldfifo #(parameter DEPTH = 8, parameter DATAWIDTH = 8) (
   input push,
   input pop,
   input parallel_load,
-  input [DEPTH-1:0][DATAWIDTH-1:0] array_in,
+  input [DATAWIDTH-1:0] array_in [DEPTH-1:0],
   input [DATAWIDTH-1:0] data_in,
   output reg [DATAWIDTH-1:0] data_out,
   output reg empty,

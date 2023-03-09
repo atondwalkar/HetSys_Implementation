@@ -15,13 +15,13 @@ module ast_systolic_array_sv(
 	 parameter DATAWIDTH = 14; //data bus width
     
     input logic clk, reset, mult_en, acc_en, load_en;
-    input logic [SIZE-1:0][DATAWIDTH-1:0] a_in; //data input from row fifo set
-    input logic [SIZE-1:0][DATAWIDTH-1:0] b_in; //data input from col fifo set
-    output logic [SIZE-1:0][SIZE-1:0][DATAWIDTH-1:0] d_out;
+    input logic [DATAWIDTH-1:0] a_in [SIZE-1:0]; //data input from row fifo set
+    input logic [DATAWIDTH-1:0] b_in [SIZE-1:0]; //data input from col fifo set
+    output logic [DATAWIDTH-1:0] d_out [SIZE-1:0][SIZE-1:0];
 	 
     
-    logic [SIZE:0][SIZE:0][DATAWIDTH-1:0] a; //internal array row connections
-    logic [SIZE:0][SIZE:0][DATAWIDTH-1:0] b; //internal array col connections
+    logic [DATAWIDTH-1:0] a [SIZE:0][SIZE:0]; //internal array row connections
+    logic [DATAWIDTH-1:0] b [SIZE:0][SIZE:0]; //internal array col connections
 
     integer k;
     always_comb
