@@ -16,13 +16,16 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
   );
   
   
-  logic [5:0][DATAWIDTH-1:0] mem;
+  logic [8:0][DATAWIDTH-1:0] mem;
   /*	0 - Col Dimension of Matrix
   *	1 - Row Dimension of Matrix
   *	2 - A(0), B(1), X(2, pop), W(3)
   *	3 - start transfer
   *	4 - Current/Source Addr
   *	5 - final Addr
+  *	6 - address step	TBI
+  *	7 - col counter	TBI
+  *	8 - row counter	TBI
   */
   
   //logic	[DATAWIDTH-1:0] final_address;
@@ -98,6 +101,8 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
 							busy <= 0;
 							mem[select] <= write ? data_in : mem[select];
 							mem[5] <= (write & select == 3) ? mem[4] + mem[1]*mem[0] - 1 : mem[5];
+							mem[7] <= (write & select == 3) ? mem[0] : mem[7];
+							mem[8] <= (write & select == 3) ? mem[1] : mem[8];
 				end
 					
 			WAIT: 		
