@@ -144,7 +144,7 @@ module ast_tensor_system_sv (
 		end
 		else
 		begin
-			weights[width_counter][depth_counter] = (set[1] & set[0] & wen) ? data_in : 0;
+			weights[width_counter][depth_counter] = (set[1] & set[0] & wen) ? data_in : weights[width_counter][depth_counter];
 		end
 	end
 	

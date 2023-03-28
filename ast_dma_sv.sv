@@ -87,18 +87,18 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
 			RESET:
 				begin			
 							finished_transfer <= 0;
-							busy <= 0;
+							//busy <= 0;
 							rW_out <= 0;
 							tensor_wen <= 0;
 							tensor_ren <= 0;
-							for(index=0; index<=5; index++)
+							for(index=0; index<=8; index++)
 								mem[index] <= 0;
 							fifo_delay <= 0;
 				end
 			
 			IDLE:
 				begin
-							busy <= 0;
+							//busy <= 0;
 							mem[select] <= write ? data_in : mem[select];
 							mem[5] <= (write & select == 3) ? mem[4] + mem[1]*mem[0] - 1 : mem[5];
 							mem[7] <= (write & select == 3) ? mem[0] : mem[7];
@@ -107,7 +107,7 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
 					
 			WAIT: 		
 				begin		
-							busy <= 1;
+							//busy <= 1;
 							if(fifo_delay == 2'b01) 
 							begin	
 								rW_out <= (mem[2] == 2) ? 1 : 0;
@@ -137,17 +137,18 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
 			default:
 				begin
 							finished_transfer <= 0;
-							busy <= 0;
+							//busy <= 0;
 							rW_out <= 0;
 							tensor_wen <= 0;
 							tensor_ren <= 0;
-							for(index=0; index<=5; index++)
+							for(index=0; index<=8; index++)
 								mem[index] <= 0;
 							fifo_delay <= 0;
 				end
 		endcase
 	end
 	
+	assign busy = (currentState == WAIT) || (currentState == TRANSFER) || (currentState == FINISH);
 	assign address_out = mem[4];
 	assign depth_out = mem[0];
 	assign width_out = mem[1];

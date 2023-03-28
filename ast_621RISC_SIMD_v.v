@@ -87,7 +87,7 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 	
 	//wire [5:0] IW; assign IW = IR3[13:8];
 	reg	throwaway_bit;
-	reg [9:0] SP;
+	reg [13:0] SP;
 	initial begin SP = 14'h3FF0; end
 	reg DM_ctrl;
 	wire [13:0] DM_addr;
