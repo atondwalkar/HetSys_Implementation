@@ -65,8 +65,9 @@ module ast_super_system_sv(
 		.wen(tensor_wen),
 		.ren(tensor_ren),
 		.set(dma_set),
-		.relu(relu),
+		.relu(ReLU),
 		.start(start_mxu),
+		.row_compress(comp_mxu),
 		.busy(mxu_busy),
 		.data_out(data_out)
 	);
@@ -97,6 +98,8 @@ module ast_super_system_sv(
 		.DMA_select_out(dma_select), 
 		.DMA_write_out(write_dma), 
 		.Start_MXU_out(start_mxu),
+		.Comp_MXU_out(comp_mxu),
+		.ReLU(ReLU),
 		.Pause_in(pause_gpp),
 		.SW_pin(SW_in), 
 		.Display_pin(Display_out),

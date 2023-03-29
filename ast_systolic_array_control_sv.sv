@@ -14,19 +14,23 @@ module ast_systolic_array_control_sv (
  memsel_B,
  next,
  done,
- busy
+ compress,
+ busy,
+ comp_add,
+ comp_en,
+ comp_ld
  );
 	 
 	 parameter SIZE = 16;
 	 
-	 input logic clk, reset, start;
+	 input logic clk, reset, start, compress;
 	 input logic [$clog2(SIZE)+1:0] cycles_in;
 	 input logic [$clog2(SIZE):0] depth_A, width_B; //row dimensions for mem select
 	 output logic load_en, mult_en, acc_en;
 	 output logic [SIZE-1:0] memsel_A, memsel_B;
-	 output logic done, next, busy;
+	 output logic done, next, busy, comp_add, comp_en, comp_ld;
 	 
-	 logic [2:0] state;
+	 logic [3:0] state;
 	 logic [1:0] mac_cycles;
 	 logic [$clog2(SIZE)+1:0] cycles;
 	 //logic [$clog2(SIZE):0] cycles_max;
@@ -52,10 +56,18 @@ module ast_systolic_array_control_sv (
 				done <= 0;
 				next <= 0;
 				busy <= 0;
+				comp_add <= 0;
+				comp_en <= 0;
+				comp_ld <= 0;
 		  end
 		  if(state == 0)
 		  begin
-				if(start)
+				if(compress)
+				begin
+					state <= 5;
+					busy <= 1;
+				end
+				else if(start)
 				begin
 					 state <= 1;
 					 //cycles_max <= (cycles_in << 1) - 1; //2n-1
@@ -75,6 +87,9 @@ module ast_systolic_array_control_sv (
 					 done <= 0;
 					 next <= 0;
 					 busy <= 0;
+					 comp_add <= 0;
+					 comp_en <= 0;
+					 comp_ld <= 0;
 				end
 		  end
 		  if(state == 1)
@@ -140,6 +155,30 @@ module ast_systolic_array_control_sv (
 				done <= 0;
 				busy <= 0;
 				state <= 0;
+		  end
+		  if(state == 4)
+		  begin
+				//comp_en <= 1;
+				comp_ld <= 1;
+				comp_en <= 0;
+				comp_add <= 0;
+				state <= 6;
+		  end
+		  if(state == 5)
+		  begin
+				cycles <= cycles + 1;
+				comp_add <= 1;
+				comp_en <= 1;
+				if(cycles == depth_A)
+					state <= 4;
+		  end
+		  if(state == 6)
+		  begin
+				cycles <= 0;
+				state <= 0;
+				busy <= 0;
+				comp_ld <= 1;
+				done <= 1;
 		  end
 	 
 	 end

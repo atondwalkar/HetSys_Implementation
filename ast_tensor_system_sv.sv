@@ -14,13 +14,14 @@ module ast_tensor_system_sv (
 	data_out,
 	ren,
 	start,
+	row_compress,
 	done
 	); 	
 	
 	parameter DATAWIDTH = 14;
 	parameter SIZE = 4;
 	
-	input logic clk, reset, wen, ren, start, relu;
+	input logic clk, reset, wen, ren, start, relu, row_compress;
 	input logic [1:0] set;
 	input logic [$clog2(SIZE):0] depth, width;
 	input logic [DATAWIDTH-1:0] data_in;
@@ -48,6 +49,9 @@ module ast_tensor_system_sv (
 	
 	logic [DATAWIDTH-1:0] weights [SIZE-1:0][SIZE-1:0];
 	
+	logic comp_add, comp_ld, comp_en;
+	logic [DATAWIDTH-1:0] compression_data [SIZE-1:0];
+	logic [DATAWIDTH-1:0] fifo_a_in [SIZE-1:0];
 	
 				
 	//-------------------------------------------------------------------------------
@@ -169,6 +173,15 @@ module ast_tensor_system_sv (
 	//-------------------------------------------------------------------------------
 	// FIFO set Matrix A and B generations
 	
+	always_comb
+	begin
+		int chi;
+		for (chi=0; chi<SIZE; chi++)
+		begin
+			fifo_a_in[chi] = (comp_ld) ? compression_data[chi] : data_in;
+		end
+	end
+	
 	genvar i;
    generate //generate FIFO set A
 		for (i=0; i<SIZE; i++) 
@@ -177,14 +190,29 @@ module ast_tensor_system_sv (
 				.clk(clk),
 				.rst(reset),
 				.rst_ptr(done),
-				.pop(fifo_select_A[i] & next_element),
-				.push(decode_out[i] & wen & ~set[1] & ~set[0]),
+				.pop((fifo_select_A[i] & next_element) | comp_en),
+				.push((decode_out[i] & wen & ~set[1] & ~set[0]) | comp_ld),
 				.parallel_load(1'b0),
-				.data_in(data_in),
+				.data_in(fifo_a_in[i]),
 				.data_out(a_toarray[i])
 			);
    end 
    endgenerate
+	
+	
+	
+	always_ff @ (posedge clk)
+	begin
+		int q;
+		for (q=0; q<SIZE; q++)
+		begin
+			if(reset)
+				compression_data[q] = 0;
+			else
+				compression_data[q] = (comp_add) ? compression_data[q] + a_toarray[q] : compression_data[q];
+		end
+	end
+	
 
 	
 	genvar j;
@@ -250,7 +278,11 @@ module ast_tensor_system_sv (
         .memsel_A(fifo_select_A),
 		  .memsel_B(fifo_select_B),
         .next(next_element),
-		  .busy(busy)
+		  .compress(row_compress),
+		  .busy(busy),
+		  .comp_add(comp_add),
+		  .comp_en(comp_en),
+		  .comp_ld(comp_ld)
     );
 	 
 	 assign done = finished_multiplicaiton;

@@ -8,7 +8,7 @@
 // (c) Dorin Patru 2022
 //----------------------------------------------------------------------------
 
-module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA_data_out, DMA_select_out, DMA_write_out, Pause_in, Start_MXU_out, Cache_Memaddr_out, Cache_WR_out, Cache_done_in, Cache_datain_out, Cache_dataout_in);
+module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA_data_out, DMA_select_out, DMA_write_out, Pause_in, Start_MXU_out, Comp_MXU_out, ReLU, Cache_Memaddr_out, Cache_WR_out, Cache_done_in, Cache_datain_out, Cache_dataout_in);
 
 	input	Resetn_pin, Clock_pin, Pause_in;
 	input	[4:0] SW_pin;			// Four switches and one push-button
@@ -16,7 +16,7 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 	output [95:0] ICis; // For simulation ONLY; should be commented out for 
 	output reg [13:0] DMA_data_out;
 	output reg [2:0] DMA_select_out;
-	output reg DMA_write_out, Start_MXU_out;
+	output reg DMA_write_out, Start_MXU_out, Comp_MXU_out, ReLU;
 	output [13:0] Cache_Memaddr_out;
 	output Cache_WR_out;
 	input Cache_done_in;
@@ -57,6 +57,7 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 							CALL_IC=6'b011001, RET_IC=6'b011010,
 
 							CFGDMA_IC = 6'b011011, SMXU_IC = 6'b011100,
+							CMXU_IC = 6'b011101,
 							
 							NOP_IC = 6'b111110;
 																			
@@ -167,7 +168,7 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 					DM_ctrl = 0;
 					DMA_depth = 0; DMA_width = 0; DMA_write_out = 0; DMA_select_out = 0;
 					nop_status = 0;
-					Start_MXU_out = 0;
+					Start_MXU_out = 0; Comp_MXU_out = 0; ReLU = 0;
 					end
 				else	
 				begin
@@ -199,6 +200,10 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 			end
 			SMXU_IC: begin
 				Start_MXU_out = 0;
+				ReLU = 0;
+			end
+			CMXU_IC: begin
+				Comp_MXU_out = 0;
 			end
 			LD_IC: begin
 //If MAeff points to the top location of the memory address space, read from
@@ -269,6 +274,10 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 			end
 			SMXU_IC: begin
 				Start_MXU_out = 1;
+				ReLU = Rj2[0];
+			end
+			CMXU_IC: begin
+				Comp_MXU_out = 1;
 			end
 			LD_IC, JMP_IC: begin 
 //Address Arithmetic to calculate the effective address:
@@ -463,6 +472,10 @@ TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // 
 			end
 			SMXU_IC: begin
 				Start_MXU_out = 0;
+				ReLU = 0;
+			end
+			SMXU_IC: begin
+				Comp_MXU_out = 0;
 			end
 			
 			LD_IC, ST_IC, JMP_IC: begin
