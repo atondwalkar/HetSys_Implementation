@@ -23,8 +23,8 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
   *	3 - start transfer
   *	4 - Current/Source Addr
   *	5 - final Addr
-  *	6 - address step	TBI
-  *	7 - col counter	TBI
+  *	6 - row step		TBI
+  *	7 - col step		TBI
   *	8 - row counter	TBI
   */
   
@@ -100,9 +100,12 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
 				begin
 							//busy <= 0;
 							mem[select] <= write ? data_in : mem[select];
-							mem[5] <= (write & select == 3) ? mem[4] + mem[1]*mem[0] - 1 : mem[5];
-							mem[7] <= (write & select == 3) ? mem[0] : mem[7];
-							mem[8] <= (write & select == 3) ? mem[1] : mem[8];
+							if(|mem[6])
+								mem[5] <= (write & select == 3) ? mem[4] + mem[1]*mem[0] + (mem[6]-mem[0])*(mem[1]-1) - 1 : mem[5];
+							else
+								mem[5] <= (write & select == 3) ? mem[4] + mem[1]*mem[0] - 1 : mem[5];
+							//mem[7] <= (write & select == 3) ? mem[0] : mem[7];
+							//mem[6] <= (write & select == 3) ? mem[1] : mem[6];
 				end
 					
 			WAIT: 		
@@ -114,14 +117,28 @@ module ast_dma_sv #(parameter DATAWIDTH = 8) (
 								tensor_ren <= (mem[2] == 2) ? 1 : 0;
 							end
 							fifo_delay <= fifo_delay + 1;
+							mem[8] <= 0;
 				end
 					
 			TRANSFER:	
 				begin									
-							mem[4] <= (mem[4] != mem[5]) ? mem[4] + 1 : mem[4];
+							if(mem[4] != mem[5])
+							begin
+								if(mem[8] == (mem[0]-1))
+									mem[4] <= mem[4] + (mem[6]-mem[0]) + 1;
+								else
+									mem[4] <= mem[4] + 1;
+							end
+							else
+							begin
+								mem[4] <= mem[4];
+							end
+							//mem[4] <= (mem[4] != mem[5]) ? mem[4] + 1 : mem[4];
 							rW_out <= (mem[4] != mem[5] & mem[2] == 2) ? 1 : 0;
 							tensor_ren <= (mem[4] != mem[5] & mem[2] == 2) ? 1 : 0;
 							tensor_wen <= (mem[2] == 2) ? 0 : 1;
+							mem[8] <= (mem[8] != (mem[0]-1)) ? mem[8] + 1 : 0;
+							//mem[9] <= (mem[8] != (mem[7]-1)) mem[9] + 1 : 0;
 				end
 			
 			FINISH:		

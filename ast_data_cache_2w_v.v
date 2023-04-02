@@ -21,7 +21,7 @@ module ast_data_cache_2w_v	(Resetn, MEM_address, MEM_in, WR, Clock, MEM_out, Don
 //parameter ma_max=16, md_max=16, ca_max=10, t_cnt_max=5;
 //parameter cam_addrs_max=4, cam_arg_max=7, cam_depth_max=16;
 
-parameter ma_max=14, md_max=14, ca_max=7, t_cnt_max=4;
+parameter ma_max=16, md_max=16, ca_max=7, t_cnt_max=4;
 parameter cam_addrs_max=2, cam_arg_max=8, cam_depth_max=4;
 parameter initfile = "blank.mif";
 
@@ -90,7 +90,7 @@ integer	grp_addrs_field;
 	//ast_CAM_v	my_cam0	(we0, 1'b1, din0, MEM_address_mux[ma_max-5:6], MEM_address_mux[5:4], dout0, mbits0);
 	//ast_CAM_v	my_cam1	(we1, 1'b1, din1, MEM_address_mux[ma_max-5:6], MEM_address_mux[5:4], dout1, mbits1);
 	
-	assign valid_snoop = (snoop_wen && (&snoop_addr[13:8])); 
+	assign valid_snoop = (snoop_wen && (&snoop_addr[15:8])); 
 	
 	assign MEM_address_mux = valid_snoop ? snoop_addr : MEM_address;
 	

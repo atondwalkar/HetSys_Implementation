@@ -9,7 +9,7 @@ module ast_super_system_sv(
 	);
 
    parameter SIZE = 4;
-	parameter DATAWIDTH = 14;
+	parameter DATAWIDTH = 16;
 
 	logic write_dma, rW_dma_out;
 	logic [2:0] dma_select;

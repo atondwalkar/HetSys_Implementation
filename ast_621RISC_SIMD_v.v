@@ -14,14 +14,14 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 	input	[4:0] SW_pin;			// Four switches and one push-button
 	output [7:0] Display_pin;	// 8 LEDs
 	output [95:0] ICis; // For simulation ONLY; should be commented out for 
-	output reg [13:0] DMA_data_out;
+	output reg [15:0] DMA_data_out;
 	output reg [2:0] DMA_select_out;
 	output reg DMA_write_out, Start_MXU_out, Comp_MXU_out, ReLU;
-	output [13:0] Cache_Memaddr_out;
+	output [15:0] Cache_Memaddr_out;
 	output Cache_WR_out;
 	input Cache_done_in;
-	output [13:0] Cache_datain_out;
-	input [13:0] Cache_dataout_in;
+	output [15:0] Cache_datain_out;
+	input [15:0] Cache_dataout_in;
 	
 								//board emulation!
 //----------------------------------------------------------------------------
@@ -67,33 +67,33 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 //----------------------------------------------------------------------------
 //-- Declare internal signals
 //----------------------------------------------------------------------------
-	reg signed [13:0] R [63:0]; //Register File (RF) 64 16-bit registers
+	reg signed [15:0] R [63:0]; //Register File (RF) 64 16-bit registers
 	reg	WR_DM, stall_mc0, stall_mc1, stall_mc2, stall_mc3;
-	reg [13:0] PC, IR3, IR2, IR1, MAB, MAX, MAeff, DM_in;
-	reg signed [13:0] TA, TB, TALUH, TALUL;
+	reg [15:0] PC, IR3, IR2, IR1, MAB, MAX, MAeff, DM_in;
+	reg signed [15:0] TA, TB, TALUH, TALUL;
 	reg [11:0] TSR, SR;
 	reg [7:0] Display_pin;
-	reg [14:0]	TALUout;
+	reg [16:0]	TALUout;
 	reg [7:0] TALUV_H, TALUV_L;
-	wire [13:0]	PM_out, DM_out;
+	wire [15:0]	PM_out, DM_out;
 	wire PM_done, DM_done;
 	wire Clock_not;
 	
-	reg [13:0] T_DMA_data_out;
+	reg [15:0] T_DMA_data_out;
 	
 	integer Ri1, Rj1, Ri2, Rj2, Ri3, Rj3; // These are Ri and Rj field values
 								// of the instructions currently in MC1, MC2, and MC3.
 	integer k;
 	
 	
-	//wire [5:0] IW; assign IW = IR3[13:8];
+	//wire [5:0] IW; assign IW = IR3[15:8];
 	reg	throwaway_bit;
-	reg [13:0] SP;
-	initial begin SP = 14'h3FF0; end
+	reg [15:0] SP;
+	initial begin SP = 16'h3FF0; end
 	reg DM_ctrl;
-	wire [13:0] DM_addr;
+	wire [15:0] DM_addr;
 	
-	reg [13:0] DMA_depth, DMA_width;
+	reg [15:0] DMA_depth, DMA_width;
 	reg nop_status;
 //----------------------------------------------------------------------------
 // In this architecture we are using a combination of structural and 
@@ -121,7 +121,7 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 		//dxpRISC521_ram1	my_ram	(MAeff[9:0], Clock_not, DM_in, WR_DM, DM_out);
 		
 		//ast_rom	my_rom	(PC[9:0], Clock_not, PM_out);
-		//assign DM_addr = ((IR2[13:8] == LD_IC) || (IR2[13:8] == ST_IC)) ? (DM_ctrl ? {4'h0, SP} : {4'h0, MAeff[9:0]}) : DM_addr;
+		//assign DM_addr = ((IR2[15:8] == LD_IC) || (IR2[15:8] == ST_IC)) ? (DM_ctrl ? {4'h0, SP} : {4'h0, MAeff[9:0]}) : DM_addr;
 		assign DM_addr = DM_ctrl ? {4'h0, SP} : MAeff;
 		//ast_ram	my_ram	(DM_addr, Clock_not, DM_in, WR_DM, DM_out);
 		
@@ -133,7 +133,7 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 		assign DM_out = Cache_dataout_in;
 		
 		
-		ast_cache_2w_v #(.initfile("dma_test.mif")) my_rom (.Clock(Clock_not), .Resetn(Resetn_pin), .MEM_address(PC[13:0]), .WR(1'b0), .MEM_out(PM_out), .MEM_in(14'b0), .Done(PM_done));
+		ast_cache_2w_v #(.initfile("dma_test.mif")) my_rom (.Clock(Clock_not), .Resetn(Resetn_pin), .MEM_address(PC[15:0]), .WR(1'b0), .MEM_out(PM_out), .MEM_in(16'b0), .Done(PM_done));
 		
 //----------------------------------------------------------------------------
 // The "dis-assembler" module; useful during verification thorugh simulation;
@@ -153,17 +153,17 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 	
 
 				if (Resetn_pin == 0) begin	
-					PC = 14'h0000; //Initialize the PC to point to the location of 
+					PC = 16'h0000; //Initialize the PC to point to the location of 
 			//the FIRST instruction to be executed; location 0000 is arbitrary!
 					for (k = 0; k < 64; k = k+1) begin R[k] = 0; end // Necessary for sim					
 			// The initialization of the stall_mc signals is necessary for 
 			// the correct startup of the pipeline.
 						stall_mc0 = 0; stall_mc1 = 1; stall_mc2 = 1; stall_mc3 = 1;
 			// All IRs are initialized to the "don't care OpCode value 0xffff
-						IR1 = 14'h3fff; IR2 = 14'h3fff; IR3 = 14'h3fff;
-					MAB = 14'h0000; MAX = 14'h0000; MAeff = 14'h0000; DM_in = 14'h0000;
-					TA = 14'h0000; TB = 14'h0000; TALUH = 14'h0000; TALUL = 14'h0000;
-					TSR = 12'b000; SR = 12'b000; TALUout = 15'h00000; WR_DM = 1'b0;
+						IR1 = 16'h3fff; IR2 = 16'h3fff; IR3 = 16'h3fff;
+					MAB = 16'h0000; MAX = 16'h0000; MAeff = 16'h0000; DM_in = 16'h0000;
+					TA = 16'h0000; TB = 16'h0000; TALUH = 16'h0000; TALUL = 16'h0000;
+					TSR = 12'b000; SR = 12'b000; TALUout = 17'h00000; WR_DM = 1'b0;
 					Ri1 = 0; Rj1 = 0; Ri2 = 0; Rj2 = 0; Ri3 = 0; Rj3 = 0;
 					DM_ctrl = 0;
 					DMA_depth = 0; DMA_width = 0; DMA_write_out = 0; DMA_select_out = 0;
@@ -190,7 +190,7 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 //----------------------------------------------------------------------------
 	if (stall_mc3 == 0) begin 
 //----------------------------------------------------------------------------
-		case (IR3[13:8])
+		case (IR3[15:8])
 			NOP_IC: begin
 				nop_status = 0;
 			end
@@ -208,7 +208,7 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 			LD_IC: begin
 //If MAeff points to the top location of the memory address space, read from
 // the INPUT PERIPHERAL(PB1 & Switches) ...
-				if (MAeff[13:4] == 10'h3FF) 
+				if (MAeff[15:4] == 10'h3FF) 
 					R[IR3[3:0]] = {9'b000000000, SW_pin};												
 // ... Else, read the Data Memory Output.
 					else R[IR3[3:0]] = DM_out; end
@@ -216,7 +216,7 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 			ST_IC: begin
 // If MAeff points to the top location of the memory address space, write to
 // the OUTPUT PERIPHERAL(8xLEDs) i.e., the least significant 8-bits only.
-				if (MAeff[13:4] == 10'h3FF) 
+				if (MAeff[15:4] == 10'h3FF) 
 					Display_pin = R[IR3[3:0]][7:0]; end
 //	... Else do nothing here, because the write to DM was initiated in MC2.
 			CALL_IC: begin
@@ -262,7 +262,7 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 //----------------------------------------------------------------------------
 	if (stall_mc2 == 0) begin
 //----------------------------------------------------------------------------
-		case (IR2[13:8])
+		case (IR2[15:8])
 			NOP_IC:begin
 				nop_status = 1;
 			end
@@ -289,12 +289,12 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 //Address Arithmetic to calculate the effective address:
 				MAeff = MAB + MAX;
 // If the address points to a memory location, prepare to write to the DM:
-				if (MAeff[13:4] != 10'h3FF) begin WR_DM = 1'b1;
+				if (MAeff[15:4] != 10'h3FF) begin WR_DM = 1'b1;
 // Next 3 lines below : DF-PU = Data Forwarding from the instruction in MC3:
 // From the instruction that performs a WB:
-	if (Rj2 == Ri3 && IR3[13:8] != (LD_IC || ST_IC || JMP_IC)) DM_in = R[Ri3];
+	if (Rj2 == Ri3 && IR3[15:8] != (LD_IC || ST_IC || JMP_IC)) DM_in = R[Ri3];
 // Next, resolve the SWAP WB:
-	else if (Rj2 == Rj3 && IR3[13:8] == SWAP_IC) DM_in = R[Rj3];
+	else if (Rj2 == Rj3 && IR3[15:8] == SWAP_IC) DM_in = R[Rj3];
 // OR without DF.
 	else DM_in = R[Rj2]; end end
 //----------------------------------------------------------------------------
@@ -318,25 +318,25 @@ module ast_621RISC_SIMD_v (Resetn_pin, Clock_pin, SW_pin, Display_pin, ICis, DMA
 //----------------------------------------------------------------------------
 			ADD_IC, ADDC_IC: begin
 					TALUout = TA + TB;
-					TSR[11] = TALUout[14]; // Carry
-					TSR[10] = TALUout[13]; // Negative
-TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // V Overflow
-					if (TALUout[13:0] == 14'h0000) TSR[8] = 1; else TSR[8] = 0; // Zero
-					TALUH = TALUout[13:0]; end
+					TSR[11] = TALUout[16]; // Carry
+					TSR[10] = TALUout[15]; // Negative
+TSR[9] = ((TA[15] ~^ TB[15]) & TA[15]) ^ (TALUout[15] & (TA[15] ~^ TB[15])); // V Overflow
+					if (TALUout[15:0] == 16'h0000) TSR[8] = 1; else TSR[8] = 0; // Zero
+					TALUH = TALUout[15:0]; end
 			SUB_IC, SUBC_IC: begin
 					TALUout = TA - TB;
-					TSR[11] = TALUout[14]; // Carry
-					TSR[10] = TALUout[13]; // Negative
-TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // V Overflow
-					if (TALUout[13:0] == 14'h0000) TSR[8] = 1; else TSR[8] = 0; // Zero
-					TALUH = TALUout[13:0]; end
+					TSR[11] = TALUout[16]; // Carry
+					TSR[10] = TALUout[15]; // Negative
+TSR[9] = ((TA[15] ~^ TB[15]) & TA[15]) ^ (TALUout[15] & (TA[15] ~^ TB[15])); // V Overflow
+					if (TALUout[15:0] == 16'h0000) TSR[8] = 1; else TSR[8] = 0; // Zero
+					TALUH = TALUout[15:0]; end
 			VADD_IC:	begin
-					TALUV_H = TA[13:7] + TB[13:7];
-					TALUH[13:7] = TALUV_H[6:0];
+					TALUV_H = TA[15:7] + TB[15:7];
+					TALUH[15:7] = TALUV_H[6:0];
 					
 					TSR[11] = TALUV_H[7]; // Carry
 					TSR[10] = TALUV_H[6]; // Negative
-					TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // V Overflow
+					TSR[9] = ((TA[15] ~^ TB[15]) & TA[15]) ^ (TALUout[15] & (TA[15] ~^ TB[15])); // V Overflow
 					if (TALUV_H[6:0] == 0) TSR[8] = 1; else TSR[8] = 0; // Zero
 					
 					TALUV_L = TA[6:0] + TB[6:0];
@@ -348,12 +348,12 @@ TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // 
 					if (TALUV_L[6:0] == 0) TSR[4] = 1; else TSR[4] = 0; // Zero
 			end
 			VSUB_IC:	begin
-					TALUV_H = TA[13:7] - TB[13:7];
-					TALUH[13:7] = TALUV_H[6:0];
+					TALUV_H = TA[15:7] - TB[15:7];
+					TALUH[15:7] = TALUV_H[6:0];
 					
 					TSR[11] = TALUV_H[7]; // Carry
 					TSR[10] = TALUV_H[6]; // Negative
-					TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // V Overflow
+					TSR[9] = ((TA[15] ~^ TB[15]) & TA[15]) ^ (TALUout[15] & (TA[15] ~^ TB[15])); // V Overflow
 					if (TALUV_H[6:0] == 0) TSR[8] = 1; else TSR[8] = 0; // Zero
 					
 					TALUV_L = TA[6:0] - TB[6:0];
@@ -369,76 +369,76 @@ TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // 
 					
 			NOT_IC: begin
 					TALUH = ~TA; //Carry and Overflow are not affected by ~
-					TSR[10] = TALUH[13]; // Negative
-					if (TALUout[13:0] == 14'h0000) TSR[8] = 1; else TSR[8] = 0; end // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if (TALUout[15:0] == 16'h0000) TSR[8] = 1; else TSR[8] = 0; end // Zero
 			AND_IC: begin
 					TALUH = TA & TB; //Carry and Overflow are not affected by &
-					TSR[10] = TALUH[13]; // Negative
-					if (TALUout[13:0] == 14'h0000) TSR[8] = 1; else TSR[8] = 0; end // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if (TALUout[15:0] == 16'h0000) TSR[8] = 1; else TSR[8] = 0; end // Zero
 			OR_IC: begin
 					TALUH = TA | TB; //Carry and Overflow are not affected by |
-					TSR[10] = TALUH[13]; // Negative
-					if (TALUout[13:0] == 14'h0000) TSR[8] = 1; else TSR[8] = 0; end // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if (TALUout[15:0] == 16'h0000) TSR[8] = 1; else TSR[8] = 0; end // Zero
 			XOR_IC: begin
 					TALUH = TA ^ TB; //Carry and Overflow are not affected by |
-					TSR[10] = TALUH[13]; // Negative
-					if (TALUout[13:0] == 14'h0000) TSR[8] = 1; else TSR[8] = 0; end //zero
+					TSR[10] = TALUH[15]; // Negative
+					if (TALUout[15:0] == 16'h0000) TSR[8] = 1; else TSR[8] = 0; end //zero
 			SRA_IC: begin	
 					TALUH = TA >>> Rj2;
-					TSR[10] = TALUH[13]; // Negative
-					if ( (TALUH[13:0] == 14'h0000) && (TALUL[13:0] == 14'h0000) ) TSR[8] = 1; else TSR[8] = 0; end // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if ( (TALUH[15:0] == 16'h0000) && (TALUL[15:0] == 16'h0000) ) TSR[8] = 1; else TSR[8] = 0; end // Zero
 			SRL_IC:
 				begin
 					TALUH = TA >> Rj2;
-					TSR[10] = TALUH[13]; // Negative
-					if ( (TALUH[13:0] == 14'h0000) && (TALUL[13:0] == 14'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if ( (TALUH[15:0] == 16'h0000) && (TALUL[15:0] == 16'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
 				end
 			RRC_IC: begin 	
 					TALUH = TA >> Rj2;
-					TSR[10] = TALUH[13]; // Negative
-					if ( (TALUH[13:0] == 14'h0000) && (TALUL[13:0] == 14'h0000) ) TSR[8] = 1; else TSR[8] = 0; end // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if ( (TALUH[15:0] == 16'h0000) && (TALUL[15:0] == 16'h0000) ) TSR[8] = 1; else TSR[8] = 0; end // Zero
 			RRV_IC:
 				begin
 					{TSR[9], TALUH} = {TSR[9], TA, TSR[9], TA} >> Rj2;
-					TSR[10] = TALUH[13]; // Negative
-					if ( (TALUH[13:0] == 14'h0000) && (TALUL[13:0] == 14'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if ( (TALUH[15:0] == 16'h0000) && (TALUL[15:0] == 16'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
 				end
 			RLN_IC:
 				begin
 					{TALUH, TSR[10], TALUL, throwaway_bit} = {TA, TSR[10], TA, TSR[10]} << Rj2;
-					TSR[10] = TALUH[13]; // Negative
-					if ( (TALUH[13:0] == 14'h0000) && (TALUL[13:0] == 14'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if ( (TALUH[15:0] == 16'h0000) && (TALUL[15:0] == 16'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
 				end
 			RLZ_IC:
 				begin
 					{TALUH, TSR[8], TALUL, throwaway_bit} = {TA, TSR[8], TA, TSR[8]} << Rj2;
-					TSR[10] = TALUH[13]; // Negative
-					if ( (TALUH[13:0] == 14'h0000) && (TALUL[13:0] == 14'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if ( (TALUH[15:0] == 16'h0000) && (TALUL[15:0] == 16'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
 				end
 			ROTR_IC:
 				begin 
 					TALUH = {TA, TA, TA} >> Rj2;
-					TSR[10] = TALUH[13]; // Negative
-					if ( (TALUH[13:0] == 14'h0000) && (TALUL[13:0] == 14'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if ( (TALUH[15:0] == 16'h0000) && (TALUL[15:0] == 16'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
 				end
 			ROTL_IC:
 				begin
 					TALUH = {TA, TA, TA} >> (4'b1110 - Rj2);
-					TSR[10] = TALUH[13]; // Negative
-					if ( (TALUH[13:0] == 14'h0000) && (TALUL[13:0] == 14'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if ( (TALUH[15:0] == 16'h0000) && (TALUL[15:0] == 16'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
 				end
 			MUL_IC:
 				begin
 					{TALUH, TALUL} = TA * TB; //MULT // $finish, $stop, $display, $rand, $urand, $log, $real
-					TSR[10] = TALUH[13]; // Negative
-					if ( (TALUH[13:0] == 14'h0000) && (TALUL[13:0] == 14'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if ( (TALUH[15:0] == 16'h0000) && (TALUL[15:0] == 16'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
 				end
 			DIV_IC:
 				begin
 					TALUH = TA / TB; //div
 					TALUL = TA % TB; //remainder
-					TSR[10] = TALUH[13]; // Negative
-					if ( (TALUH[13:0] == 14'h0000) && (TALUL[13:0] == 14'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
+					TSR[10] = TALUH[15]; // Negative
+					if ( (TALUH[15:0] == 16'h0000) && (TALUL[15:0] == 16'h0000) ) TSR[8] = 1; else TSR[8] = 0; // Zero
 				end	
 					
 					
@@ -454,7 +454,7 @@ TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // 
 // For LD, ST, and JMP my address offset is IW1, i.e. I need to fetch IW1 in 
 // MC1, and assign the right values to MAB and MAX
 //----------------------------------------------------------------------------
-		case (IR1[13:8])
+		case (IR1[15:8])
 			NOP_IC:begin
 				nop_status = 1;
 			end
@@ -463,7 +463,7 @@ TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // 
 				else	
 				begin
 					if (Ri1 == Ri2) DMA_data_out = PM_out + TALUH; 
-					else if ((IR2[13:8] != ADDC_IC && IR2[13:8] != SUB_IC) && (IR2[13:8] == MUL_IC || IR2[13:8] == DIV_IC || IR2[13:8] == SWAP_IC) && Ri1 == Rj2) DMA_data_out = PM_out + TALUL;
+					else if ((IR2[15:8] != ADDC_IC && IR2[15:8] != SUB_IC) && (IR2[15:8] == MUL_IC || IR2[15:8] == DIV_IC || IR2[15:8] == SWAP_IC) && Ri1 == Rj2) DMA_data_out = PM_out + TALUL;
 					else DMA_data_out = PM_out + R[Ri1];
 				end
 				DMA_write_out = 1;
@@ -491,7 +491,7 @@ TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // 
 				else if (Ri1 == 2) MAX = SP;
 				else if (Ri1 == Ri2)	
 					begin
-						if((IR2[13:8] == MUL_IC || IR2[13:8] == DIV_IC || IR2[13:8] == SWAP_IC))
+						if((IR2[15:8] == MUL_IC || IR2[15:8] == DIV_IC || IR2[15:8] == SWAP_IC))
 							MAX = TALUL;
 						else
 							MAX = TALUH; // <-- DF-FU = Data Forwarding 
@@ -513,7 +513,7 @@ TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // 
 				else if (Ri1 == 2) MAX = SP;
 				else if (Ri1 == Ri2)	
 					begin
-						if((IR2[13:8] == MUL_IC || IR2[13:8] == DIV_IC || IR2[13:8] == SWAP_IC))
+						if((IR2[15:8] == MUL_IC || IR2[15:8] == DIV_IC || IR2[15:8] == SWAP_IC))
 							MAX = TALUL;
 						else
 							MAX = TALUH; // <-- DF-FU = Data Forwarding 
@@ -546,7 +546,7 @@ TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // 
 			ADDC_IC, SUBC_IC: begin
 				if (Ri1 == Ri2)
 					begin
-						if ((IR2[13:8] == MUL_IC || IR2[13:8] == DIV_IC || IR2[13:8] == SWAP_IC))
+						if ((IR2[15:8] == MUL_IC || IR2[15:8] == DIV_IC || IR2[15:8] == SWAP_IC))
 							TA = TALUL;
 						else
 							TA = TALUH;
@@ -556,11 +556,11 @@ TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // 
 // DF-FU; Ri2 below is right for every previous instruction that returns a 
 // result in Ri2; need to modify for a previous SWAP if the value is to be Rj2			
 			if (Ri1 == Ri2) TA = TALUH; 
-			else if ((IR2[13:8] != ADDC_IC && IR2[13:8] != SUB_IC) && (IR2[13:8] == MUL_IC || IR2[13:8] == DIV_IC || IR2[13:8] == SWAP_IC) && Ri1 == Rj2) TA = TALUL;
+			else if ((IR2[15:8] != ADDC_IC && IR2[15:8] != SUB_IC) && (IR2[15:8] == MUL_IC || IR2[15:8] == DIV_IC || IR2[15:8] == SWAP_IC) && Ri1 == Rj2) TA = TALUL;
 			else TA = R[Ri1];
 			
 			if (Rj1 == Ri2) TB = TALUH; 
-			else if ((IR2[13:8] != ADDC_IC && IR2[13:8] != SUB_IC) && (IR2[13:8] == MUL_IC || IR2[13:8] == DIV_IC || IR2[13:8] == SWAP_IC) && Rj1 == Rj2) TB = TALUL;
+			else if ((IR2[15:8] != ADDC_IC && IR2[15:8] != SUB_IC) && (IR2[15:8] == MUL_IC || IR2[15:8] == DIV_IC || IR2[15:8] == SWAP_IC) && Rj1 == Rj2) TB = TALUL;
 			else TB = R[Rj1]; 
 			
 			end
@@ -575,47 +575,47 @@ TSR[9] = ((TA[13] ~^ TB[13]) & TA[13]) ^ (TALUout[13] & (TA[13] ~^ TB[13])); // 
 //----------------------------------------------------------------------------
 // Instruction in MC2 can move to MC3; Below: Rj3 = Ri3 because the previous 
 // instruction returns a result in Ri2; need to modify for a previous SWAP
-		if (stall_mc2 == 0 && IR3[13:8] != JMP_IC && (IR3[13:8] != CALL_IC) && (IR3[13:8] != RET_IC) //&& (IR3[13:8] != LDDMA_IC) && (IR3[13:8] != LADMA_IC) && (IR3[13:8] != STDMA_IC)
+		if (stall_mc2 == 0 && IR3[15:8] != JMP_IC && (IR3[15:8] != CALL_IC) && (IR3[15:8] != RET_IC) //&& (IR3[15:8] != LDDMA_IC) && (IR3[15:8] != LADMA_IC) && (IR3[15:8] != STDMA_IC)
 		) 
 		begin IR3 = IR2; Ri3 = Ri2; Rj3 = Rj2; stall_mc3 = 0; end 
 // Instruction in MC2 is stalled and IR3 is loaded with the "don't care IW"	
-		else begin stall_mc2 =1; IR3 = 14'h3fff; Ri3=102; Rj3=302; end 
+		else begin stall_mc2 =1; IR3 = 16'h3fff; Ri3=102; Rj3=302; end 
 //----------------------------------------------------------------------------
 // Instruction in MC1 can move to MC2; Rj2 may need to be = Ri1 for certain 
 // instruction sequences	
 	if (stall_mc1 == 0 
-	&& (IR2[13:8] != JMP_IC) && (IR3[13:8] != JMP_IC)
-	&& (IR2[13:8] != CALL_IC) && (IR3[13:8] != CALL_IC)
-	&& (IR2[13:8] != RET_IC) && (IR3[13:8] != RET_IC)
-	//&& (IR2[13:8] != LDDMA_IC) && (IR3[13:8] != LDDMA_IC)
-	//&& (IR2[13:8] != LADMA_IC) && (IR3[13:8] != LADMA_IC)
-	//&& (IR2[13:8] != STDMA_IC) && (IR3[13:8] != STDMA_IC)
+	&& (IR2[15:8] != JMP_IC) && (IR3[15:8] != JMP_IC)
+	&& (IR2[15:8] != CALL_IC) && (IR3[15:8] != CALL_IC)
+	&& (IR2[15:8] != RET_IC) && (IR3[15:8] != RET_IC)
+	//&& (IR2[15:8] != LDDMA_IC) && (IR3[15:8] != LDDMA_IC)
+	//&& (IR2[15:8] != LADMA_IC) && (IR3[15:8] != LADMA_IC)
+	//&& (IR2[15:8] != STDMA_IC) && (IR3[15:8] != STDMA_IC)
 	) 
 		begin IR2 = IR1; Ri2 = Ri1; Rj2 = Rj1; stall_mc2 = 0; end
 // Instruction in MC1 is stalled and IR2 is loaded with the "don't care IW"	
-	else begin stall_mc1 = 1; IR2 = 14'h3fff; Ri2=101; Rj2=301;  end 
+	else begin stall_mc1 = 1; IR2 = 16'h3fff; Ri2=101; Rj2=301;  end 
 //----------------------------------------------------------------------------
 // Instruction in MC0 can move to MC1; 	
-	if ((stall_mc0 == 0) && (IR1[13:8] != JMP_IC) && (IR2[13:8] != JMP_IC) && (IR3[13:8] != JMP_IC)
-	&& (IR1[13:8] != LD_IC) 
-	&& (IR1[13:8] != ST_IC)
-	&& (IR1[13:8] != CFGDMA_IC)
-	&& (IR1[13:8] != CALL_IC) && (IR2[13:8] != CALL_IC) && (IR3[13:8] != CALL_IC) 
-	&& (IR1[13:8] != RET_IC) && (IR2[13:8] != RET_IC) && (IR3[13:8] != RET_IC)
-	//&& (IR1[13:8] != LDDMA_IC) && (IR2[13:8] != LDDMA_IC) && (IR3[13:8] != LDDMA_IC)
-	//&& (IR1[13:8] != LADMA_IC) && (IR2[13:8] != LADMA_IC) && (IR3[13:8] != LADMA_IC)
-	//&& (IR1[13:8] != STDMA_IC) && (IR2[13:8] != STDMA_IC) && (IR3[13:8] != STDMA_IC)
+	if ((stall_mc0 == 0) && (IR1[15:8] != JMP_IC) && (IR2[15:8] != JMP_IC) && (IR3[15:8] != JMP_IC)
+	&& (IR1[15:8] != LD_IC) 
+	&& (IR1[15:8] != ST_IC)
+	&& (IR1[15:8] != CFGDMA_IC)
+	&& (IR1[15:8] != CALL_IC) && (IR2[15:8] != CALL_IC) && (IR3[15:8] != CALL_IC) 
+	&& (IR1[15:8] != RET_IC) && (IR2[15:8] != RET_IC) && (IR3[15:8] != RET_IC)
+	//&& (IR1[15:8] != LDDMA_IC) && (IR2[15:8] != LDDMA_IC) && (IR3[15:8] != LDDMA_IC)
+	//&& (IR1[15:8] != LADMA_IC) && (IR2[15:8] != LADMA_IC) && (IR3[15:8] != LADMA_IC)
+	//&& (IR1[15:8] != STDMA_IC) && (IR2[15:8] != STDMA_IC) && (IR3[15:8] != STDMA_IC)
 	) 
 // Below: IW0 is fetched directly into IR1, Ri1, and Rj1
 		begin IR1 = PM_out; Ri1 = PM_out[7:4];
 		Rj1 = PM_out[3:0]; PC = PC + 1'b1; stall_mc1 = 0; end 
 // Instruction in MC0 is stalled and IR1 is loaded with the "don't care IW"	
-	else begin stall_mc0 = 1; IR1 = 14'h3fff;  Ri1=100; Rj1=300; end 
+	else begin stall_mc0 = 1; IR1 = 16'h3fff;  Ri1=100; Rj1=300; end 
 //----------------------------------------------------------------------------
 // After the JMP_IC instruction reaches MC3 OR (LD_IC or ST_C) reach MC1,
 // start refilling the pipe by removing the stalls. For JMP_IC the stalls are 
 // removed in this order: stall_mc0 --> stall_mc1 --> stall_mc2
-	if ((IR3 == 14'h3fff) | (IR2[13:8] == LD_IC) | (IR2[13:8] == ST_IC)) 
+	if ((IR3 == 16'h3fff) | (IR2[15:8] == LD_IC) | (IR2[15:8] == ST_IC)) 
 		stall_mc0 = 0; 
 //----------------------------------------------------------------------------
 	end

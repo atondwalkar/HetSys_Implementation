@@ -21,7 +21,7 @@ module ast_cache_2w_v	(Resetn, MEM_address, MEM_in, WR, Clock, MEM_out, Done);
 //parameter ma_max=16, md_max=16, ca_max=10, t_cnt_max=5;
 //parameter cam_addrs_max=4, cam_arg_max=7, cam_depth_max=16;
 
-parameter ma_max=14, md_max=14, ca_max=7, t_cnt_max=4;
+parameter ma_max=16, md_max=16, ca_max=7, t_cnt_max=4;
 parameter cam_addrs_max=2, cam_arg_max=8, cam_depth_max=4;
 parameter initfile = "blank.mif";
 
