@@ -1,0 +1,24 @@
+--Program Memory Initialization File 	
+--Created by ast_dcs_asm 	
+WIDTH = 14; 	
+DEPTH = 1024; 	
+ADDRESS_RADIX = HEX;	% Can be HEX, BIN or DEC % 	
+DATA_RADIX = BIN;	% Can be HEX, BIN or DEC % 	
+
+CONTENT BEGIN
+ 	
+--A> : <-OC-><Ri><Rj>
+0000 : 00011000110011; % SUB R3, R3; % 
+0001 : 00011100111111; % ADDC R3, 0xf; % 
+0002 : 00000100000011; % ST R3, M[R0, % 
+0003 : 00000000000000; % 0x0]; % 
+0004 : 00000000000100; % LD R4, M[R0, % 
+0005 : 00000000000000; % 0x0]; % 
+0006 : 01100100000000; % CALL U, % 
+0007 : 00000000001010; % @IncReg; % 
+0008 : 00010000000000; % JMP U, % 
+0009 : 00000000000010; % @Store; % 
+000a : 00011100110001; % ADDC R3, 0x1; % 
+000b : 01101000000000; % RET U, % 
+[ 000c .. 3FF ] : 00000000; % Fill the remaining locations with 0 % 
+ END; 
